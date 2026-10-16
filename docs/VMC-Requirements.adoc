@@ -524,6 +524,8 @@ Both are published by the AuthIndicators Working Group.
 |Certificate Revocation List
 |DBA
 |Doing Business As
+|DCV
+|Domain Control Validation
 |DNS
 |Domain Name System
 |FIPS
@@ -1527,44 +1529,37 @@ The token (as defined in RFC 8737, section 3) MUST NOT be used for more than 30 
 
 ===== DNS Labeled with Account ID - ACME
 
-This method has not been adopted in these Requirements and MUST NOT be used.
-
-NOTE: This section is reserved so that the numbering of the methods in this section remains aligned with Section 3.2.2.4 of the Baseline Requirements.
+This method has not been adopted and MUST NOT be used.
 
 ===== DNS TXT Record with Persistent Value
 
-Confirming the Applicant's control over the FQDN by verifying the presence of a Persistent DCV TXT Record identifying the Applicant. The record MUST be placed at the ``_validation-persist`` label prepended to the Authorization Domain Name being validated (i.e., ``_validation-persist.[Authorization Domain Name]``).
+Confirming the Applicant's control over the FQDN by verifying the presence of a Persistent DCV TXT Record identifying the Applicant. The record MUST be placed at the "_validation-persist" label prepended to the Authorization Domain Name being validated (i.e. "_validation-persist.[Authorization Domain Name]").
 
-When selecting the Authorization Domain Name for this method, the CA MUST NOT use the FQDN returned from a DNS CNAME lookup as the FQDN for the purposes of domain validation. The CA MAY prune zero or more labels from left to right as described in the definition of Authorization Domain Name.
+The CA MUST confirm that the RDATA value of the Persistent DCV TXT Record:
 
-The CA MUST confirm the Persistent DCV TXT Record's RDATA value fulfills the following requirements:
+. conforms to the issue-value syntax as defined in section 4.2 of RFC 8659, and
+. contains an issuer-domain-name that is an Issuer Domain Name disclosed by the CA in Section 4.2 of its Certificate Policy and/or Certification Practice Statement (see <<_publication_of_information>>), and
+. contains an "accounturi" parameter whose value is a unique URI (as described in section 3 of RFC 8657) identifying the account of the Applicant that requested validation of the FQDN.
 
-. The RDATA value MUST conform to the issue-value syntax as defined in RFC 8659, Section 4.2; and
-. The issuer-domain-name value MUST be an Issuer Domain Name disclosed by the CA in Section 4.2 of the CA's Certificate Policy and/or Certification Practice Statement (see <<_publication_of_information>>); and
-. The issue-value MUST contain an ``accounturi`` parameter, where the parameter value is a unique URI (as described by RFC 8657, Section 3) identifying the account of the Applicant which requested validation for this FQDN; and
-. The issue-value MAY contain a ``persistUntil`` parameter. If present, the parameter value MUST be a base-10 encoded integer representing a UNIX timestamp (the number of seconds since 1970-01-01T00:00:00Z ignoring leap seconds); and
-. The issue-value MAY contain additional parameters. CAs MUST ignore any unknown parameter keys.
+The issue-value MAY contain a "persistUntil" parameter. If present, the parameter value MUST be a base-10 encoded integer representing a UNIX timestamp (the number of seconds since 1970-01-01T00:00:00Z, ignoring leap seconds). The issue-value MAY contain additional parameters, and the CA MUST ignore any unknown parameter keys.
 
-If the ``persistUntil`` parameter is present, the CA MUST evaluate its value. If the time of the check is after the time specified in the ``persistUntil`` parameter value, the CA MUST NOT use the record as evidence of the Applicant's control over the FQDN.
-
-For example, the Persistent DCV TXT Record might look like:
+For example, a Persistent DCV TXT Record might look like:
 
 ```
 _validation-persist.example.com IN TXT "authority.example; accounturi=https://authority.example/acct/123; persistUntil=1782424856"
 ```
 
-For the purposes of <<_performing_identification_and_authentication_functions>>, CAs MUST consider 10 days as the maximum validation data reuse period for validations completed using this method.
+If the "persistUntil" parameter is present, the CA MUST evaluate its value. If the time of the check is after the time specified in the "persistUntil" parameter value, the CA MUST NOT use the record as evidence of the Applicant's control over the FQDN. The following table shows how the "persistUntil" parameter affects whether a record can be used for validation:
 
-The following table shows how the ``persistUntil`` parameter affects whether a DNS record can be used for validation at different points in time:
+[cols=",,,",]
+|===
+|*Date/time of validation* |*persistUntil* |*Usable for validation* |*Explanation*
+|2025-06-15T12:00:00Z |2026-01-01T00:00:00Z (1767225600) |Yes |Validation time is before the persistUntil timestamp, so the record is usable.
+|2025-06-15T12:00:00Z |2025-01-01T00:00:00Z (1735689600) |No |Validation time is after the persistUntil timestamp, so the record is not usable.
+|2025-06-15T12:00:00Z |(not present) |Yes |No persistUntil parameter is present, so no time restriction applies.
+|===
 
-.Examples of how the persistUntil parameter affects validation
-[cols="2,2,1,3",options="header"]
-|===
-|Date/time of validation |persistUntil |Usable for validation |Explanation
-|2025-06-15T12:00:00Z |2026-01-01T00:00:00Z (1767225600) |Yes |Validation time is before persistUntil timestamp, so record is usable
-|2025-06-15T12:00:00Z |2025-01-01T00:00:00Z (1735689600) |No |Validation time is after persistUntil timestamp, so record is not usable
-|2025-06-15T12:00:00Z |(not present) |Yes |No persistUntil parameter present, so no time restriction applies
-|===
+For the purposes of <<_performing_identification_and_authentication_functions>>, the CA MUST consider 10 days as the maximum validation data reuse period for validations completed using this method.
 
 NOTE: Once the FQDN has been validated using this method, the CA MAY also issue Certificates for other FQDNs that end with all the labels of the validated FQDN.
 
